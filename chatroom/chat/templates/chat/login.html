@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block body_block %}
+{% if messages %}
+      {% for message in messages %}
+        <div class="alert {{ message.tags }} alert-dismissible" role="alert">
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+<style type="text/css">
+        body{background: #000}.card{border: none;height: 320px}.forms-inputs{position: relative}.forms-inputs span{position: absolute;top:-18px;left: 10px;background-color: #fff;padding: 5px 10px;font-size: 15px}.forms-inputs input{height: 50px;border: 2px solid #eee}.forms-inputs input:focus{box-shadow: none;outline: none;border: 2px solid #000}.btn{height: 50px}.success-data{display: flex;flex-direction: column}.bxs-badge-check{font-size: 90px}
+    </style>
+    <body>     
+        <form method="POST">
+            {% csrf_token %}
+            <div class="container mt-5">
+                <div class="row d-flex justify-content-center">
+                    <div class="col-md-6">
+                        <div class="card px-5 py-5" id="form1">
+                            <div class="form-data" v-if="!submitted">
+                                <div class="forms-inputs mb-4"> 
+                                    <span>Username</span> 
+                                    <input name="username" autocomplete="off" type="text" class="form-control">
+                                </div>
+                                <div class="forms-inputs mb-4"> <span>Password</span> 
+                                    <input name="password" autocomplete="off" type="password" class="form-control">
+                                </div>
+                                <div class="mb-3"> <button v-on:click.stop.prevent="submit" class="btn btn-dark w-100">Login</button> </div>
+                                <div class="mb-3"> <a href="{% url 'chat:signup' %}" v-on:click.stop.prevent="submit" class="btn btn-primary w-100">Sign up</a> </div>
+                            </div>
+                            <!-- <div class="success-data" v-else>
+                                <div class="text-center d-flex flex-column"> <i class='bx bxs-badge-check'></i> <span class="text-center fs-1">You have been logged in <br> Successfully</span> </div>
+                            </div> -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </body>
+{% endblock %}

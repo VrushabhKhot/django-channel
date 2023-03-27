@@ -1,0 +1,240 @@
+
+{% extends "base.html" %}
+{% block title %}Chat with user{% endblock %}
+{% load static %}
+{% block body_block %}
+<link rel="stylesheet" href="{% static 'index.css' %}">
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">Chat Room</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+                <a class="nav-link my-2 my-sm-0" href="{% url 'chat:logout' %}">Sign Out</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<div class="back-container">
+    <div class="container-fluid front-container">
+        <div class="back-top"></div>
+        <div class="back-main"></div>
+    </div>
+    <div class="container front-container1">
+        <div class="row chat-top">
+            <div class="col-sm-4 border-right border-secondary">
+                <img src="{% static 'dp.png' %}" alt="" class="profile-image rounded-circle">
+                <span class="ml-2">{{request.user.get_full_name | capfirst}}</span>
+
+            </div>
+            <div class="col-sm-8">
+                
+                <img src="{% static 'dp.png' %}" alt="" class="profile-image rounded-circle">
+                <span class="ml-2">{{user.get_full_name | capfirst}}</span>
+                <br>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-4 contacts">
+                <div class="contact-table-scroll">
+                    <table class="table table-hover">
+                        <tbody>
+                            <br>
+                                <tr>                                    
+                                    <form method="post" id="serach_form">
+                                        {% csrf_token %}
+                                        <input type="search" placeholder="Search..."  id="user_search" onkeyup="loadusers(this.id)" required autofocus>
+                                        <button type="submit" id="search">Search</button>
+                                        <input type='hidden' class="form-control" id='user_val' name='user_val'>
+                                    </form>
+                                </tr>
+                                <br>
+                            {% for user in active_users %}
+                            <tr>
+                                <td><img src="{% static 'dp.png' %}" alt="" class="profile-image rounded-circle">
+                                </td>
+                                <td><a href="{% url 'chat:roomselect' id=user.id %}" style="text-decoration: none; color: black;">{{user.get_full_name | capfirst}} </a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <div class="col-sm-8 message-area">
+                <div class="message-table-scroll">
+                    <table class="table">
+                        <tbody id='chat-log'>
+                            {% for chat in chats.all %}
+                            {% if chat.user.id == request.user.id %}
+                            <tr>
+                                <td>
+                                    <p class="bg-success p-2 mt-2 mr-5 shadow-sm text-white float-right rounded message sender">
+                                        {{ chat.content }}
+                                    </p>
+                                </td>
+                                <td>
+                                    <p><small class="p-1 shadow-sm">{{chat.timestamp|time:'H:i'}}</small>
+                                    </p>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td>
+                                    <p class="bg-primary p-2 mt-2 mr-5 shadow-sm text-white float-left rounded message receiver">
+                                        {{ chat.content }}
+                                    </p>
+                                </td>
+                                <td>
+                                    <p><small class="p-1 shadow-sm">{{chat.timestamp|time:'H:i'}}</small>
+                                    </p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row message-box p-3">
+                    <div class="col-sm-8">
+                        <input type="text" class="form-control" id="chat-message-input" placeholder="Write message...">
+
+                    </div>
+                    <div class="col-sm-2 mt-1">
+                        <div class="control">
+                            <button class="btn btn-success" id="chat-message-submit">Submit</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{{ room_name|json_script:"room-name" }}
+{{user.id|json_script:"json-username"}}
+{{ request.user.id|json_script:"user_id" }}
+{{request.user.username|json_script:"json-message-username"}}
+
+
+
+    <script>
+
+        $(document).ready(function(){
+            $('#chat-log').animate({ scrollTop: $(document).height() }, 1200);
+
+            $('#chat-log').bind('DOMSubtreeModified', function(){
+              console.log('changed');
+              $('#chat-log').animate({ scrollTop: $(document).height() }, 1200);
+            });
+        });
+
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+        const chatLog = document.querySelector('#chat-log')
+        
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/chat/'
+            + roomName
+            + '/'
+        );
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const messageElement = document.createElement('div')
+            const userId = data['user_id']
+            messageElement.innerText = data.message
+            const loggedInUserId = JSON.parse(document.getElementById('user_id').textContent)
+            // document.querySelector('#chat-log').value += (data.message + '\n');
+            // messageElement.innerText += '\n '
+            if (userId === loggedInUserId) {
+                messageElement.classList.add('message', 'sender')
+
+            } else {
+                messageElement.classList.add('message', 'receiver')
+            }
+
+            chatLog.appendChild(messageElement)
+
+            if( chatLog != " ")
+            {
+                playSound();
+            }
+
+            if (document.querySelector('#emptyText')) {
+                document.querySelector('#emptyText').remove()
+            }
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.keyCode === 13) {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        };
+
+        document.querySelector('#chat-message-submit').onclick = function(e) {
+            const messageInputDom = document.querySelector('#chat-message-input');
+            const message = messageInputDom.value;
+            // message += ' \n Text from {{ request.user.username }}';
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+            messageInputDom.value = '';
+        };
+        function playSound() {
+            var audio = new Audio('{% static "audio_file.mp3" %}');
+            audio.play();
+        }
+
+    </script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" media="all" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript">
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js" type="text/javascript"></script>
+    <script>
+        function loadusers(mat_id)
+        {
+            var mat_id2='#'+mat_id;				
+            var mat_type='';
+            var getData = function (request, response) {
+                $.getJSON(
+                    'get_users/' + request.term,
+                    function (data) {
+                        // console.log(data);
+                        response(data);
+                    });
+            };
+         
+            var selectItem = function (event, ui) {
+                // console.log(ui);
+                $(mat_id2).val(ui.item.label);				
+                $('#user_val').val(ui.item.id);				
+                
+                action_src = "{% url 'chat:roomselect' id=0 %}".replace('0', $('#user_val').val());
+                console.log(action_src)
+                var your_form = document.getElementById('serach_form');
+                your_form.action = action_src ;
+                return false;
+            }
+         
+            $(mat_id2).autocomplete({
+                source: getData,
+                select: selectItem,
+                minLength: 1,
+                maxShowItems:5,
+                scroll:true,
+                                
+            });
+        }
+    </script>
+{% endblock %}
